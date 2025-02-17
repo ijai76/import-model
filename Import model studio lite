@@ -58,6 +58,14 @@ insertButton.Text = "Insert Model"
 insertButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 insertButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 insertButton.Parent = frame
+insertButton.TextButton.MouseButton1Click:Connect(function()
+    local modelId = tonumber(inputBox.Text)
+    if modelId then
+        insertModel(modelId)
+    else
+        print("ID Model tidak valid!")
+    end
+end)
 
 -- Buat tombol untuk minimize menu
 local minimizeButton = Instance.new("TextButton")
@@ -84,7 +92,7 @@ nameLabel.Position = UDim2.new(0.5, -100, 0.2, 0)
 nameLabel.Text = "@ZEI"
 nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 nameLabel.TextSize = 18
-nameLabel.Font = Enum.Font.Hanami -- Font Hana
+nameLabel.Font = Enum.Font.SourceSans -- Font default
 nameLabel.BackgroundTransparency = 1
 nameLabel.Parent = frame
 
