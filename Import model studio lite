@@ -1,4 +1,3 @@
--- Buat ScreenGui
 local screenGui = Instance.new("ScreenGui")
 screenGui.Parent = game.CoreGui
 
@@ -58,43 +57,6 @@ insertButton.Text = "Insert Model"
 insertButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 insertButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 insertButton.Parent = frame
-insertButton.TextButton.MouseButton1Click:Connect(function()
-    local modelId = tonumber(inputBox.Text)
-    if modelId then
-        insertModel(modelId)
-    else
-        print("ID Model tidak valid!")
-    end
-end)
-
--- Buat tombol untuk minimize menu
-local minimizeButton = Instance.new("TextButton")
-minimizeButton.Size = UDim2.new(0, 30, 0, 30)
-minimizeButton.Position = UDim2.new(1, -70, 0, 10)
-minimizeButton.Text = "-"
-minimizeButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-minimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-minimizeButton.Parent = frame
-
--- Buat tombol untuk menutup menu
-local closeButton = Instance.new("TextButton")
-closeButton.Size = UDim2.new(0, 30, 0, 30)
-closeButton.Position = UDim2.new(1, -35, 0, 10)
-closeButton.Text = "X"
-closeButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeButton.Parent = frame
-
--- Tambahkan label dengan nama @ZEI
-local nameLabel = Instance.new("TextLabel")
-nameLabel.Size = UDim2.new(0, 200, 0, 30)
-nameLabel.Position = UDim2.new(0.5, -100, 0.2, 0)
-nameLabel.Text = "@ZEI"
-nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-nameLabel.TextSize = 18
-nameLabel.Font = Enum.Font.SourceSans -- Font default
-nameLabel.BackgroundTransparency = 1
-nameLabel.Parent = frame
 
 -- Fungsi untuk insert model
 local function insertModel(modelId)
@@ -118,9 +80,4 @@ insertButton.MouseButton1Click:Connect(function()
     else
         print("ID Model tidak valid!")
     end
-end)
-
--- Event ketika tombol tutup ditekan
-closeButton.MouseButton1Click:Connect(function()
-    screenGui.Enabled = not screenGui.Enabled
 end)
