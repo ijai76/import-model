@@ -1,83 +1,32 @@
-local screenGui = Instance.new("ScreenGui")
-screenGui.Parent = game.CoreGui
+-- Script Executor dengan Menu
+-- @sinpifmuuh/ZEI
 
--- Buat Frame utama dengan warna hitam
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 260, 0, 210)
-frame.Position = UDim2.new(0.35, 0, 0.25, 0)
-frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-frame.BorderSizePixel = 0
-frame.Parent = screenGui
-
--- Buat border biru tua di sekeliling frame
-local borderThickness = 5
-
-local topBorder = Instance.new("Frame")
-topBorder.Size = UDim2.new(1, 0, 0, borderThickness)
-topBorder.Position = UDim2.new(0, 0, 0, -borderThickness)
-topBorder.BackgroundColor3 = Color3.fromRGB(0, 0, 139)
-topBorder.BorderSizePixel = 0
-topBorder.Parent = frame
-
-local bottomBorder = Instance.new("Frame")
-bottomBorder.Size = UDim2.new(1, 0, 0, borderThickness)
-bottomBorder.Position = UDim2.new(0, 0, 1, 0)
-bottomBorder.BackgroundColor3 = Color3.fromRGB(0, 0, 139)
-bottomBorder.BorderSizePixel = 0
-bottomBorder.Parent = frame
-
-local leftBorder = Instance.new("Frame")
-leftBorder.Size = UDim2.new(0, borderThickness, 1, 0)
-leftBorder.Position = UDim2.new(0, -borderThickness, 0, 0)
-leftBorder.BackgroundColor3 = Color3.fromRGB(0, 0, 139)
-leftBorder.BorderSizePixel = 0
-leftBorder.Parent = frame
-
-local rightBorder = Instance.new("Frame")
-rightBorder.Size = UDim2.new(0, borderThickness, 1, 0)
-rightBorder.Position = UDim2.new(1, 0, 0, 0)
-rightBorder.BackgroundColor3 = Color3.fromRGB(0, 0, 139)
-rightBorder.BorderSizePixel = 0
-rightBorder.Parent = frame
-
--- Buat TextBox untuk memasukkan Model ID
-local inputBox = Instance.new("TextBox")
-inputBox.Size = UDim2.new(0, 180, 0, 30)
-inputBox.Position = UDim2.new(0.5, -90, 0.6, 0)
-inputBox.PlaceholderText = "Masukkan Model ID"
-inputBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-inputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-inputBox.Parent = frame
-
--- Buat tombol untuk insert model
-local insertButton = Instance.new("TextButton")
-insertButton.Size = UDim2.new(0, 180, 0, 30)
-insertButton.Position = UDim2.new(0.5, -90, 0.75, 0)
-insertButton.Text = "Insert Model"
-insertButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-insertButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-insertButton.Parent = frame
-
--- Fungsi untuk insert model
+-- Fungsi untuk menginsert model
 local function insertModel(modelId)
-    local success, model = pcall(function()
-        return game:GetService("InsertService"):LoadAsset(modelId)
-    end)
-
-    if success and model then
-        model.Parent = game.Workspace
-        print("Model berhasil dimasukkan!")
-    else
-        print("Gagal memuat model. Periksa ID.")
-    end
+local model = game:GetService("InsertService"):LoadAsset(modelId)
+model.Parent = game.Workspace
 end
 
--- Event ketika tombol Insert Model ditekan
-insertButton.MouseButton1Click:Connect(function()
-    local modelId = tonumber(inputBox.Text)
-    if modelId then
-        insertModel(modelId)
-    else
-        print("ID Model tidak valid!")
-    end
-end)
+-- Fungsi untuk menampilkan menu
+local function showMenu()
+print("Script Executor dengan Menu")
+print("1. Insert Model")
+print("2. Keluar")
+
+```local choice = io.read()
+
+if choice == "1" then
+    print("Masukkan ID model:")
+    local modelId = io.read()
+    insertModel(modelId)
+elseif choice == "2" then
+    print("Keluar dari script executor")
+else
+    print("Pilihan tidak valid")
+    showMenu()
+end
+```
+end
+
+-- Jalankan menu
+showMenu()
