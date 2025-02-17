@@ -1,37 +1,58 @@
 -- Buat ScreenGui
 local screenGui = Instance.new("ScreenGui")
-screenGui.Parent = game.CoreGui -- Menggunakan CoreGui untuk Game Studio Lite
+screenGui.Parent = game.CoreGui -- Agar muncul di Game Studio Lite
 
--- Buat ImageLabel untuk menampilkan gambar
+-- Buat Frame sebagai menu mengambang
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 400, 0, 300) -- Ukuran menu
+frame.Position = UDim2.new(0.7, 0, 0.2, 0) -- Posisi mengambang di sudut layar
+frame.BackgroundTransparency = 1 -- Transparan agar hanya gambar terlihat
+frame.Parent = screenGui
+
+-- Buat ImageLabel untuk menampilkan gambar menu
 local imageLabel = Instance.new("ImageLabel")
-imageLabel.Size = UDim2.new(0, 400, 0, 250) -- Sesuaikan ukuran
-imageLabel.Position = UDim2.new(0.5, -200, 0.2, 0) -- Posisi di tengah
-imageLabel.Image = "https://iili.io/2y2FBuS.jpg" -- Menggunakan URL gambar
-imageLabel.Parent = screenGui
+imageLabel.Size = UDim2.new(1, 0, 1, 0) -- Mengisi seluruh frame
+imageLabel.Image = "https://iili.io/2y2FBuS.jpg" -- Link gambar menu
+imageLabel.Parent = frame
 
--- Buat tombol insert model
+-- Buat TextBox untuk memasukkan Model ID
+local inputBox = Instance.new("TextBox")
+inputBox.Size = UDim2.new(0, 200, 0, 40)
+inputBox.Position = UDim2.new(0.5, -100, 0.7, 0) -- Di tengah bawah gambar
+inputBox.PlaceholderText = "Masukkan Model ID"
+inputBox.Parent = frame
+
+-- Buat tombol untuk insert model
 local insertButton = Instance.new("TextButton")
-insertButton.Size = UDim2.new(0, 200, 0, 50)
-insertButton.Position = UDim2.new(0.5, -100, 0.5, 0)
+insertButton.Size = UDim2.new(0, 200, 0, 40)
+insertButton.Position = UDim2.new(0.5, -100, 0.85, 0)
 insertButton.Text = "Insert Model"
-insertButton.Parent = screenGui
+insertButton.Parent = frame
 
--- Buat tombol keluar
-local exitButton = Instance.new("TextButton")
-exitButton.Size = UDim2.new(0, 200, 0, 50)
-exitButton.Position = UDim2.new(0.5, -100, 0.6, 0)
-exitButton.Text = "Keluar"
-exitButton.Parent = screenGui
+-- Buat tombol untuk menutup menu
+local closeButton = Instance.new("TextButton")
+closeButton.Size = UDim2.new(0, 40, 0, 40)
+closeButton.Position = UDim2.new(1, -50, 0, 10) -- Pojok kanan atas
+closeButton.Text = "X"
+closeButton.Parent = frame
 
 -- Fungsi untuk insert model
 local function insertModel(modelId)
-    local model = game:GetService("InsertService"):LoadAsset(modelId)
-    model.Parent = game.Workspace
+    local success, model = pcall(function()
+        return game:GetService("InsertService"):LoadAsset(modelId)
+    end)
+
+    if success and model then
+        model.Parent = game.Workspace
+        print("Model berhasil dimasukkan!")
+    else
+        print("Gagal memuat model. Periksa ID.")
+    end
 end
 
 -- Event ketika tombol Insert Model ditekan
 insertButton.MouseButton1Click:Connect(function()
-    local modelId = tonumber(game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("ScreenGui"):FindFirstChild("InsertBox").Text)
+    local modelId = tonumber(inputBox.Text)
     if modelId then
         insertModel(modelId)
     else
@@ -39,8 +60,7 @@ insertButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- Event ketika tombol keluar ditekan
-exitButton.MouseButton1Click:Connect(function()
-    screenGui:Destroy()
+-- Event ketika tombol tutup ditekan
+closeButton.MouseButton1Click:Connect(function()
+    screenGui.Enabled = not screenGui.Enabled -- Toggle menu
 end)
-
