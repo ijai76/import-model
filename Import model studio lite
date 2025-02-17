@@ -5,7 +5,7 @@ screenGui.Parent = game.CoreGui -- Agar muncul di Game Studio Lite
 -- Buat Frame sebagai menu mengambang
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0, 400, 0, 300) -- Ukuran menu
-frame.Position = UDim2.new(0.7, 0, 0.2, 0) -- Posisi mengambang di sudut layar
+frame.Position = UDim2.new(0.3, 0, 0.2, 0) -- Posisi lebih ke tengah atas
 frame.BackgroundTransparency = 1 -- Transparan agar hanya gambar terlihat
 frame.Parent = screenGui
 
