@@ -1,32 +1,43 @@
--- Script Executor dengan Menu
--- @sinpifmuuh/ZEI
+-- ap.lua
+local Rayfield = loadstring(game:HttpGet("https://raw.githubusercontent.com/shlexware/Rayfield/main/source.lua"))()
 
--- Fungsi untuk menginsert model
-local function insertModel(modelId)
-local model = game:GetService("InsertService"):LoadAsset(modelId)
-model.Parent = game.Workspace
-end
+local Window = Rayfield:CreateWindow({
+    Name = "Model Loader | Studio Lite",
+    LoadingTitle = "Loading...",
+    LoadingSubtitle = "Just for Education",
+    ConfigurationSaving = {
+        Enabled = false,
+    },
+    Discord = {
+        Enabled = false,
+    },
+    KeySystem = false,
+})
 
--- Fungsi untuk menampilkan menu
-local function showMenu()
-print("Script Executor dengan Menu")
-print("1. Insert Model")
-print("2. Keluar")
+local MainTab = Window:CreateTab("Import", 4483362458)
 
-```local choice = io.read()
+MainTab:CreateInput({
+    Name = "Masukkan ID Model",
+    PlaceholderText = "contoh: 1234567890",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(ModelID)
+        local success, model = pcall(function()
+            return game:GetService("InsertService"):LoadAsset(tonumber(ModelID))
+        end)
 
-if choice == "1" then
-    print("Masukkan ID model:")
-    local modelId = io.read()
-    insertModel(modelId)
-elseif choice == "2" then
-    print("Keluar dari script executor")
-else
-    print("Pilihan tidak valid")
-    showMenu()
-end
-```
-end
-
--- Jalankan menu
-showMenu()
+        if success and model then
+            model.Parent = workspace
+            Rayfield:Notify({
+                Title = "Berhasil",
+                Content = "Model berhasil dimasukkan ke Workspace!",
+                Duration = 5,
+            })
+        else
+            Rayfield:Notify({
+                Title = "Gagal",
+                Content = "Gagal memuat model. Periksa ID atau pastikan kamu di Studio mode.",
+                Duration = 5,
+            })
+        end
+    end,
+})
