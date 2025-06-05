@@ -1,43 +1,192 @@
--- ap.lua
-local Rayfield = loadstring(game:HttpGet("https://raw.githubusercontent.com/shlexware/Rayfield/main/source.lua"))()
+--[[
+    @author depso (depthso)
+    @modified by ChatGPT for ZEIOFFICIAL.MY.ID
+    @description Grow a Garden stock bot with split webhooks and custom footer
+]]
 
-local Window = Rayfield:CreateWindow({
-    Name = "Model Loader | Studio Lite",
-    LoadingTitle = "Loading...",
-    LoadingSubtitle = "Just for Education",
-    ConfigurationSaving = {
-        Enabled = false,
-    },
-    Discord = {
-        Enabled = false,
-    },
-    KeySystem = false,
-})
+type table = {
+	[any]: any
+}
 
-local MainTab = Window:CreateTab("Import", 4483362458)
+_G.Configuration = {
+	--// Reporting
+	["Enabled"] = true,
+	["Webhook_GearSeed"] = "https://discord.com/api/webhooks/1379997860711497891/BmxZs0sFKGA14JI_IsT3TTBqByAyt_pib9OWkRKD48WWNFMylHlE4VcLB9XzkLp52KMK",
+	["Webhook_Egg"] = "https://discord.com/api/webhooks/1380007547682951318/kMsTAvbZRaiQTtndli4Jilenn0VKWgjmeTf7IjHjpZCtsmn3rHYZZQG7oyDc8QzcwiQ-",
+	["Webhook_Weather"] = "https://discord.com/api/webhooks/1380007537226551406/RqOmTA-6ryjNMXJ-ybLwd3-6OTji0qfxj33JkSORPsu7QKHIBqA-fIgqOWH4EdzQ1YY_",
+	["Weather Reporting"] = true,
 
-MainTab:CreateInput({
-    Name = "Masukkan ID Model",
-    PlaceholderText = "contoh: 1234567890",
-    RemoveTextAfterFocusLost = false,
-    Callback = function(ModelID)
-        local success, model = pcall(function()
-            return game:GetService("InsertService"):LoadAsset(tonumber(ModelID))
-        end)
+	--// User
+	["Anti-AFK"] = true,
+	["Auto-Reconnect"] = true,
+	["Rendering Enabled"] = false,
 
-        if success and model then
-            model.Parent = workspace
-            Rayfield:Notify({
-                Title = "Berhasil",
-                Content = "Model berhasil dimasukkan ke Workspace!",
-                Duration = 5,
-            })
-        else
-            Rayfield:Notify({
-                Title = "Gagal",
-                Content = "Gagal memuat model. Periksa ID atau pastikan kamu di Studio mode.",
-                Duration = 5,
-            })
-        end
-    end,
-})
+	--// Embeds
+	["AlertLayouts"] = {
+		["SeedsAndGears"] = {
+			EmbedColor = Color3.fromRGB(56, 238, 23),
+			Layout = {
+				["ROOT/SeedStock/Stocks"] = "SEEDS STOCK",
+				["ROOT/GearStock/Stocks"] = "GEAR STOCK"
+			}
+		},
+		["Eggs"] = {
+			EmbedColor = Color3.fromRGB(251, 255, 14),
+			Layout = {
+				["ROOT/PetEggStock/Stocks"] = "EGG STOCK"
+			}
+		},
+		["Weather"] = {
+			EmbedColor = Color3.fromRGB(42, 109, 255),
+		}
+	}
+}
+
+--// Services
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+local VirtualUser = cloneref(game:GetService("VirtualUser"))
+local RunService = game:GetService("RunService")
+local GuiService = game:GetService("GuiService")
+local TeleportService = game:GetService("TeleportService")
+
+--// Remotes
+local DataStream = ReplicatedStorage.GameEvents.DataStream
+local WeatherEventStarted = ReplicatedStorage.GameEvents.WeatherEventStarted
+
+local LocalPlayer = Players.LocalPlayer
+
+local function GetConfigValue(Key: string)
+	return _G.Configuration[Key]
+end
+
+RunService:Set3dRenderingEnabled(GetConfigValue("Rendering Enabled"))
+
+if _G.StockBot then return end 
+_G.StockBot = true
+
+local function ConvertColor3(Color: Color3): number
+	return tonumber(Color:ToHex(), 16)
+end
+
+local function GetDataPacket(Data, Target: string)
+	for _, Packet in Data do
+		if Packet[1] == Target then
+			return Packet[2]
+		end
+	end
+end
+
+local function GetLayout(Type: string)
+	return GetConfigValue("AlertLayouts")[Type]
+end
+
+local function WebhookSend(Type: string, Fields: table)
+	if not GetConfigValue("Enabled") then return end
+
+	local WebhookMap = {
+		["SeedsAndGears"] = GetConfigValue("Webhook_GearSeed"),
+		["Eggs"] = GetConfigValue("Webhook_Egg"),
+		["Weather"] = GetConfigValue("Webhook_Weather"),
+	}
+	local Webhook = WebhookMap[Type]
+	if not Webhook then return end
+
+	local Layout = GetLayout(Type)
+	local Color = ConvertColor3(Layout.EmbedColor)
+	local TimeStamp = DateTime.now():ToIsoDate()
+
+	local Body = {
+		embeds = {
+			{
+				color = Color,
+				fields = Fields,
+				footer = { text = "ZEIOFFICIAL.MY.ID" },
+				timestamp = TimeStamp
+			}
+		}
+	}
+
+	local RequestData = {
+        Url = Webhook,
+        Method = "POST",
+        Headers = { ["Content-Type"] = "application/json" },
+        Body = HttpService:JSONEncode(Body)
+    }
+
+	task.spawn(request, RequestData)
+end
+
+local function MakeStockString(Stock: table): string
+	local str = ""
+	for Name, Data in Stock do 
+		local Amount = Data.Stock
+		local EggName = Data.EggName 
+		str ..= (EggName or Name) .. " **x" .. Amount .. "**\n"
+	end
+	return str
+end
+
+local function ProcessPacket(Data, Type: string, Layout)
+	local Fields = {}
+	local FieldsLayout = Layout.Layout
+	if not FieldsLayout then return end
+
+	for Packet, Title in FieldsLayout do 
+		local Stock = GetDataPacket(Data, Packet)
+		if not Stock then return end
+
+		table.insert(Fields, {
+			name = Title,
+			value = MakeStockString(Stock),
+			inline = true
+		})
+	end
+
+	WebhookSend(Type, Fields)
+end
+
+DataStream.OnClientEvent:Connect(function(Type: string, Profile: string, Data: table)
+	if Type ~= "UpdateData" or not Profile:find(LocalPlayer.Name) then return end
+
+	for Name, Layout in GetConfigValue("AlertLayouts") do
+		ProcessPacket(Data, Name, Layout)
+	end
+end)
+
+WeatherEventStarted.OnClientEvent:Connect(function(Event: string, Length: number)
+	if not GetConfigValue("Weather Reporting") then return end
+
+	local ServerTime = math.round(workspace:GetServerTimeNow())
+	local EndUnix = ServerTime + Length
+
+	WebhookSend("Weather", {{
+		name = "WEATHER",
+		value = Event .. "\nEnds:<t:" .. EndUnix .. ":R>",
+		inline = true
+	}})
+end)
+
+LocalPlayer.Idled:Connect(function()
+	if GetConfigValue("Anti-AFK") then
+		VirtualUser:CaptureController()
+		VirtualUser:ClickButton2(Vector2.new())
+	end
+end)
+
+GuiService.ErrorMessageChanged:Connect(function()
+	if not GetConfigValue("Auto-Reconnect") then return end
+
+	local IsSingle = #Players:GetPlayers() <= 1
+	local PlaceId = game.PlaceId
+	local JobId = game.JobId
+
+	queue_on_teleport("https://rawscripts.net/raw/Grow-a-Garden-Grow-a-Garden-Stock-bot-41500")
+
+	if IsSingle then
+		TeleportService:Teleport(PlaceId, LocalPlayer)
+	else
+		TeleportService:TeleportToPlaceInstance(PlaceId, JobId, LocalPlayer)
+	end
+end)
