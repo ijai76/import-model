@@ -1,192 +1,162 @@
---[[
-    @author depso (depthso)
-    @modified by ChatGPT for ZEIOFFICIAL.MY.ID
-    @description Grow a Garden stock bot with split webhooks and custom footer
+--[[ 
+    Grow a Garden Stock Bot by ZEIOFFICIAL.MY.ID 
+    Mod by ChatGPT based on original by depso (depthso)
+    https://www.roblox.com/games/126884695634066
 ]]
 
-type table = {
-	[any]: any
-}
+type table = { [any]: any }
 
 _G.Configuration = {
-	--// Reporting
-	["Enabled"] = true,
-	["Webhook_GearSeed"] = "https://discord.com/api/webhooks/1379997860711497891/BmxZs0sFKGA14JI_IsT3TTBqByAyt_pib9OWkRKD48WWNFMylHlE4VcLB9XzkLp52KMK",
-	["Webhook_Egg"] = "https://discord.com/api/webhooks/1380007547682951318/kMsTAvbZRaiQTtndli4Jilenn0VKWgjmeTf7IjHjpZCtsmn3rHYZZQG7oyDc8QzcwiQ-",
-	["Webhook_Weather"] = "https://discord.com/api/webhooks/1380007537226551406/RqOmTA-6ryjNMXJ-ybLwd3-6OTji0qfxj33JkSORPsu7QKHIBqA-fIgqOWH4EdzQ1YY_",
-	["Weather Reporting"] = true,
+    ["Enabled"] = true,
 
-	--// User
-	["Anti-AFK"] = true,
-	["Auto-Reconnect"] = true,
-	["Rendering Enabled"] = false,
+    -- Webhooks
+    ["Webhook_SeedsGears"] = "https://discord.com/api/webhooks/1379997860711497891/BmxZs0sFKGA14JI_IsT3TTBqByAyt_pib9OWkRKD48WWNFMylHlE4VcLB9XzkLp52KMK",
+    ["Webhook_Egg"] = "https://discord.com/api/webhooks/1380007547682951318/kMsTAvbZRaiQTtndli4Jilenn0VKWgjmeTf7IjHjpZCtsmn3rHYZZQG7oyDc8QzcwiQ-",
+    ["Webhook_Weather"] = "https://discord.com/api/webhooks/1380007537226551406/RqOmTA-6ryjNMXJ-ybLwd3-6OTji0qfxj33JkSORPsu7QKHIBqA-fIgqOWH4EdzQ1YY_",
 
-	--// Embeds
-	["AlertLayouts"] = {
-		["SeedsAndGears"] = {
-			EmbedColor = Color3.fromRGB(56, 238, 23),
-			Layout = {
-				["ROOT/SeedStock/Stocks"] = "SEEDS STOCK",
-				["ROOT/GearStock/Stocks"] = "GEAR STOCK"
-			}
-		},
-		["Eggs"] = {
-			EmbedColor = Color3.fromRGB(251, 255, 14),
-			Layout = {
-				["ROOT/PetEggStock/Stocks"] = "EGG STOCK"
-			}
-		},
-		["Weather"] = {
-			EmbedColor = Color3.fromRGB(42, 109, 255),
-		}
-	}
+    ["Weather Reporting"] = true,
+    ["Anti-AFK"] = true,
+    ["Auto-Reconnect"] = true,
+    ["Rendering Enabled"] = false
 }
 
---// Services
+-- Services
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local VirtualUser = cloneref(game:GetService("VirtualUser"))
 local RunService = game:GetService("RunService")
 local GuiService = game:GetService("GuiService")
-local TeleportService = game:GetService("TeleportService")
 
---// Remotes
+-- Remotes
 local DataStream = ReplicatedStorage.GameEvents.DataStream
 local WeatherEventStarted = ReplicatedStorage.GameEvents.WeatherEventStarted
-
 local LocalPlayer = Players.LocalPlayer
 
-local function GetConfigValue(Key: string)
-	return _G.Configuration[Key]
-end
+RunService:Set3dRenderingEnabled(_G.Configuration["Rendering Enabled"])
 
-RunService:Set3dRenderingEnabled(GetConfigValue("Rendering Enabled"))
-
-if _G.StockBot then return end 
+if _G.StockBot then return end
 _G.StockBot = true
 
-local function ConvertColor3(Color: Color3): number
-	return tonumber(Color:ToHex(), 16)
+local lastSeedsGears, lastEggs = "", ""
+local function convertColor3(color: Color3): number
+    local hex = color:ToHex()
+    return tonumber(hex, 16)
 end
 
-local function GetDataPacket(Data, Target: string)
-	for _, Packet in Data do
-		if Packet[1] == Target then
-			return Packet[2]
-		end
-	end
+local function getDataPacket(Data, Target: string)
+    for _, Packet in Data do
+        local Name, Content = Packet[1], Packet[2]
+        if Name == Target then return Content end
+    end
 end
 
-local function GetLayout(Type: string)
-	return GetConfigValue("AlertLayouts")[Type]
+local function makeStockString(Stock: table): string
+    local str = ""
+    for Name, Data in Stock do
+        local Amount = Data.Stock
+        local EggName = Data.EggName
+        Name = EggName or Name
+        str ..= `{Name} **x{Amount}**\n`
+    end
+    return str
 end
 
-local function WebhookSend(Type: string, Fields: table)
-	if not GetConfigValue("Enabled") then return end
-
-	local WebhookMap = {
-		["SeedsAndGears"] = GetConfigValue("Webhook_GearSeed"),
-		["Eggs"] = GetConfigValue("Webhook_Egg"),
-		["Weather"] = GetConfigValue("Webhook_Weather"),
-	}
-	local Webhook = WebhookMap[Type]
-	if not Webhook then return end
-
-	local Layout = GetLayout(Type)
-	local Color = ConvertColor3(Layout.EmbedColor)
-	local TimeStamp = DateTime.now():ToIsoDate()
-
-	local Body = {
-		embeds = {
-			{
-				color = Color,
-				fields = Fields,
-				footer = { text = "ZEIOFFICIAL.MY.ID" },
-				timestamp = TimeStamp
-			}
-		}
-	}
-
-	local RequestData = {
-        Url = Webhook,
-        Method = "POST",
-        Headers = { ["Content-Type"] = "application/json" },
-        Body = HttpService:JSONEncode(Body)
+local function sendWebhook(webhookUrl, embedColor, title, content)
+    local color = convertColor3(embedColor)
+    local body = {
+        embeds = {{
+            title = title,
+            description = content,
+            color = color,
+            footer = {
+                text = "ZEIOFFICIAL.MY.ID"
+            },
+            timestamp = DateTime.now():ToIsoDate()
+        }}
     }
 
-	task.spawn(request, RequestData)
+    local requestData = {
+        Url = webhookUrl,
+        Method = "POST",
+        Headers = {
+            ["Content-Type"] = "application/json"
+        },
+        Body = HttpService:JSONEncode(body)
+    }
+
+    task.spawn(request, requestData)
 end
 
-local function MakeStockString(Stock: table): string
-	local str = ""
-	for Name, Data in Stock do 
-		local Amount = Data.Stock
-		local EggName = Data.EggName 
-		str ..= (EggName or Name) .. " **x" .. Amount .. "**\n"
-	end
-	return str
-end
-
-local function ProcessPacket(Data, Type: string, Layout)
-	local Fields = {}
-	local FieldsLayout = Layout.Layout
-	if not FieldsLayout then return end
-
-	for Packet, Title in FieldsLayout do 
-		local Stock = GetDataPacket(Data, Packet)
-		if not Stock then return end
-
-		table.insert(Fields, {
-			name = Title,
-			value = MakeStockString(Stock),
-			inline = true
-		})
-	end
-
-	WebhookSend(Type, Fields)
-end
+-- Timers
+local lastSendGearSeed = 0
+local lastSendEgg = 0
 
 DataStream.OnClientEvent:Connect(function(Type: string, Profile: string, Data: table)
-	if Type ~= "UpdateData" or not Profile:find(LocalPlayer.Name) then return end
+    if Type ~= "UpdateData" or not Profile:find(LocalPlayer.Name) then return end
 
-	for Name, Layout in GetConfigValue("AlertLayouts") do
-		ProcessPacket(Data, Name, Layout)
-	end
+    local now = tick()
+
+    -- Seeds + Gears (5 menit sekali)
+    if now - lastSendGearSeed >= 300 then
+        local seed = getDataPacket(Data, "ROOT/SeedStock/Stocks")
+        local gear = getDataPacket(Data, "ROOT/GearStock/Stocks")
+
+        if seed or gear then
+            local text = ""
+            if seed then text ..= "**SEEDS STOCK**\n" .. makeStockString(seed) .. "\n" end
+            if gear then text ..= "**GEAR STOCK**\n" .. makeStockString(gear) .. "\n" end
+
+            if text ~= lastSeedsGears then
+                lastSeedsGears = text
+                sendWebhook(_G.Configuration["Webhook_SeedsGears"], Color3.fromRGB(56, 238, 23), "Seed & Gear Stock", text)
+                lastSendGearSeed = now
+            end
+        end
+    end
+
+    -- Eggs (30 menit sekali)
+    if now - lastSendEgg >= 1800 then
+        local eggs = getDataPacket(Data, "ROOT/PetEggStock/Stocks")
+        if eggs then
+            local text = "**EGG STOCK**\n" .. makeStockString(eggs)
+            if text ~= lastEggs then
+                lastEggs = text
+                sendWebhook(_G.Configuration["Webhook_Egg"], Color3.fromRGB(251, 255, 14), "Egg Stock", text)
+                lastSendEgg = now
+            end
+        end
+    end
 end)
 
+-- Weather event (langsung saat muncul)
 WeatherEventStarted.OnClientEvent:Connect(function(Event: string, Length: number)
-	if not GetConfigValue("Weather Reporting") then return end
-
-	local ServerTime = math.round(workspace:GetServerTimeNow())
-	local EndUnix = ServerTime + Length
-
-	WebhookSend("Weather", {{
-		name = "WEATHER",
-		value = Event .. "\nEnds:<t:" .. EndUnix .. ":R>",
-		inline = true
-	}})
+    if not _G.Configuration["Weather Reporting"] then return end
+    local ServerTime = math.round(workspace:GetServerTimeNow())
+    local EndUnix = ServerTime + Length
+    local content = `{Event}\nEnds: <t:{EndUnix}:R>`
+    sendWebhook(_G.Configuration["Webhook_Weather"], Color3.fromRGB(42, 109, 255), "WEATHER", content)
 end)
 
+-- Anti-AFK
 LocalPlayer.Idled:Connect(function()
-	if GetConfigValue("Anti-AFK") then
-		VirtualUser:CaptureController()
-		VirtualUser:ClickButton2(Vector2.new())
-	end
+    if not _G.Configuration["Anti-AFK"] then return end
+    VirtualUser:CaptureController()
+    VirtualUser:ClickButton2(Vector2.new())
 end)
 
+-- Auto-Reconnect
 GuiService.ErrorMessageChanged:Connect(function()
-	if not GetConfigValue("Auto-Reconnect") then return end
+    local isSingle = #Players:GetPlayers() <= 1
+    local PlaceId, JobId = game.PlaceId, game.JobId
 
-	local IsSingle = #Players:GetPlayers() <= 1
-	local PlaceId = game.PlaceId
-	local JobId = game.JobId
+    if not _G.Configuration["Auto-Reconnect"] then return end
 
-	queue_on_teleport("https://rawscripts.net/raw/Grow-a-Garden-Grow-a-Garden-Stock-bot-41500")
+    queue_on_teleport("https://rawscripts.net/raw/Grow-a-Garden-Grow-a-Garden-Stock-bot-41500")
 
-	if IsSingle then
-		TeleportService:Teleport(PlaceId, LocalPlayer)
-	else
-		TeleportService:TeleportToPlaceInstance(PlaceId, JobId, LocalPlayer)
-	end
+    if isSingle then
+        TeleportService:Teleport(PlaceId, LocalPlayer)
+    else
+        TeleportService:TeleportToPlaceInstance(PlaceId, JobId, LocalPlayer)
+    end
 end)
